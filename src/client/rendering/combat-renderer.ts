@@ -58,7 +58,7 @@ import {
   type CombatRenderCache,
 } from "./render-cache.js";
 
-export const VISUAL_POLISH_VERSION = "hd2d-cyberpixel-v33";
+export const VISUAL_POLISH_VERSION = "hd2d-cyberpixel-v34";
 export {
   MAX_FEEDBACK_GRAPHICS_PER_FRAME,
   selectBudgetedFeedback,
