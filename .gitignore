@@ -2,6 +2,10 @@
 node_modules/
 dist/
 
+# Runtime and verification output
+.data/
+artifacts/
+
 # Local environment files
 .env
 .env.*

@@ -3,17 +3,34 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "engines": {
+    "node": ">=25.0.0"
+  },
   "scripts": {
-    "llm:test:deepseek": "tsx scripts/deepseek-json-schema-latency.ts"
+    "dev": "concurrently -k -n server,client \"npm:dev:server\" \"npm:dev:client\"",
+    "dev:client": "vite --host 127.0.0.1",
+    "dev:server": "tsx watch src/server/main.ts",
+    "build": "vite build",
+    "preview": "vite preview --host 127.0.0.1",
+    "test": "vitest",
+    "typecheck": "tsc --noEmit",
+    "llm:latency:deepseek": "tsx scripts/deepseek-json-schema-latency.ts",
+    "llm:test:deepseek": "tsx scripts/live-wish-interpreter-golden.ts"
   },
   "dependencies": {
     "ajv": "^8.17.1",
     "dotenv": "^16.4.7",
-    "openai": "^4.104.0"
+    "openai": "^4.104.0",
+    "pixi.js": "^8.19.0"
   },
   "devDependencies": {
+    "@types/jsdom": "^27.0.0",
     "@types/node": "^22.10.2",
+    "concurrently": "^9.2.1",
+    "jsdom": "^27.4.0",
     "tsx": "^4.19.2",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "vite": "^8.0.16",
+    "vitest": "^4.1.8"
   }
 }
