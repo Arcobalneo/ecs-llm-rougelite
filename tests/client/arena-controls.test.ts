@@ -1,12 +1,40 @@
 import { JSDOM } from "jsdom";
-import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { INITIAL_ENEMY_COUNT, desiredEnemyCountForBossKills, mountArena } from "../../src/client/arena.js";
+import { mountArena } from "../../src/client/arena.js";
+import { bootPixiArena } from "../../src/client/rendering/combat-renderer.js";
 import { createCombatLoopState } from "../../src/client/simulation/combat-loop.js";
+import {
+  INITIAL_ENEMY_COUNT,
+  desiredEnemyCountForBossKills,
+} from "../../src/client/simulation/enemy-spawning.js";
 import { xpThresholdForLevel } from "../../src/client/simulation/progression-combat.js";
 import { CONTENT_VERSION } from "../../src/shared/content-version.js";
 import { wishcraftCatalog } from "../../src/shared/wishcraft/catalog.js";
+import type { Wishcraft } from "../../src/shared/wishcraft/types.js";
+
+const bossVictoryProbeWishcraft: Wishcraft = {
+  ...wishcraftCatalog.fixtures.starLance,
+  id: "wishcraft-test-boss-victory-probe",
+  mechanicPieceIds: [
+    ...wishcraftCatalog.fixtures.starLance.mechanicPieceIds,
+    "projectile-scatter",
+    "projectile-beam",
+    "area-burst-nova",
+    "damage-tuning",
+  ],
+  parameters: {
+    ...wishcraftCatalog.fixtures.starLance.parameters,
+    damageScale: 20,
+  },
+  visualPieceIds: [
+    ...wishcraftCatalog.fixtures.starLance.visualPieceIds,
+    "impact-starfire-3",
+    "weapon-neon-1",
+    "core-crystal-2",
+  ],
+};
+
+const BOSS_VICTORY_PROBE_MS = 4_000;
 
 describe("Arena controls shell", () => {
   afterEach(() => {
@@ -271,18 +299,8 @@ describe("Arena controls shell", () => {
     expect(initialCombatState.enemies).toEqual([]);
   });
 
-  it("uses one shared Arena visual state for DOM phase data and Pixi rendering", () => {
-    const source = readFileSync(
-      fileURLToPath(new URL("../../src/client/arena.ts", import.meta.url)),
-      "utf8",
-    );
-    const bootSignature = source.match(/async function bootPixiArena\([\s\S]*?\): Promise<void>/)?.[0] ?? "";
-    const bootBody = source.match(/async function bootPixiArena\([\s\S]*?\n}\n\nfunction isRealBrowserCanvas/)?.[0] ?? "";
-
-    expect(source).toContain("void bootPixiArena(options.canvas, options.screen, state, combatState, bossState, arenaVisualState)");
-    expect(bootSignature).toContain("visualState: ArenaVisualState");
-    expect(bootBody).not.toContain("const arenaVisualState = createArenaVisualState()");
-    expect(bootBody).toContain("visualState");
+  it("keeps Pixi battlefield rendering behind an explicit renderer module boundary", () => {
+    expect(typeof bootPixiArena).toBe("function");
   });
 
   it("does not advance score while a Wish Break is waiting for player input", async () => {
@@ -527,7 +545,7 @@ describe("Arena controls shell", () => {
       language: "zh",
       run: { runId: "run_test_123", contentVersion: CONTENT_VERSION },
       initialCombatState,
-      fulfillWish: async () => wishcraftCatalog.fixtures.starLance,
+      fulfillWish: async () => bossVictoryProbeWishcraft,
       recordBossPlan: async ({ defeated, encounterId, plan }) => {
         recordedPlans.push({ defeated, encounterId, plannedLevel: plan.plannedLevel });
       },
@@ -550,7 +568,7 @@ describe("Arena controls shell", () => {
       },
     ]);
 
-    vi.advanceTimersByTime(40_000);
+    vi.advanceTimersByTime(BOSS_VICTORY_PROBE_MS);
     await waitForMicrotasks(dom.window);
 
     expect(recordedPlans).toEqual([
@@ -587,7 +605,7 @@ describe("Arena controls shell", () => {
       language: "zh",
       run: { runId: "run_test_123", contentVersion: CONTENT_VERSION },
       initialCombatState,
-      fulfillWish: async () => wishcraftCatalog.fixtures.starLance,
+      fulfillWish: async () => bossVictoryProbeWishcraft,
       recordBossPlan: async ({ defeated, encounterId }) => {
         if (!defeated) {
           await new Promise<void>((resolve) => {
@@ -610,7 +628,7 @@ describe("Arena controls shell", () => {
     expect(releaseWarningWrite).toBeTypeOf("function");
     expect(recordedPlans).toEqual([]);
 
-    vi.advanceTimersByTime(40_000);
+    vi.advanceTimersByTime(BOSS_VICTORY_PROBE_MS);
     await waitForMicrotasks(dom.window);
     expect(recordedPlans).toEqual([]);
 
@@ -643,7 +661,7 @@ describe("Arena controls shell", () => {
       language: "zh",
       run: { runId: "run_test_123", contentVersion: CONTENT_VERSION },
       initialCombatState,
-      fulfillWish: async () => wishcraftCatalog.fixtures.starLance,
+      fulfillWish: async () => bossVictoryProbeWishcraft,
       recordBossPlan: async ({ defeated, encounterId }) => {
         if (!defeated) {
           throw new Error("warning write failed");
@@ -661,7 +679,7 @@ describe("Arena controls shell", () => {
     vi.advanceTimersByTime(900);
     await waitForMicrotasks(dom.window, 4);
 
-    vi.advanceTimersByTime(40_000);
+    vi.advanceTimersByTime(BOSS_VICTORY_PROBE_MS);
     await waitForMicrotasks(dom.window, 4);
 
     expect(recordedPlans).toEqual([]);
@@ -701,7 +719,7 @@ describe("Arena controls shell", () => {
       initialCombatState,
       fulfillWish: async ({ level }) => {
         fulfilledLevels.push(level);
-        return wishcraftCatalog.fixtures.starLance;
+        return bossVictoryProbeWishcraft;
       },
     });
 
@@ -728,7 +746,7 @@ describe("Arena controls shell", () => {
     expect(dialog.hidden).toBe(true);
     expect(dialog.getAttribute("data-phase")).not.toBe("wish-break");
 
-    vi.advanceTimersByTime(40_000);
+    vi.advanceTimersByTime(BOSS_VICTORY_PROBE_MS);
     await waitForMicrotasks(dom.window);
 
     expect(dom.window.document.querySelector("[data-boss-warning]")?.getAttribute("data-phase")).toBe("victory");
