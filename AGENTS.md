@@ -28,6 +28,8 @@ Treat these as the starting direction, not final architecture. Do not replace th
 - Prefer lightweight ECS components and explicit system boundaries.
 - Avoid coupling core game logic to DOM/UI framework state.
 - Keep LLM-related logic bounded to gameplay content decisions; do not let model output become executable game code.
+- Keep the engineering directory structure explicit and modular. Rendering, visual assets, QA scenes, simulation, UI, and tests should live in clearly named modules with narrow responsibilities.
+- Do not let single files become large asset or behavior buckets. When a file starts mixing orchestration, drawing details, data tables, and tests, split it before adding more behavior.
 
 ## Visual Direction
 
@@ -43,6 +45,15 @@ Treat these as the starting direction, not final architecture. Do not replace th
 - Prefer data-driven content where it keeps behavior easier to reason about.
 - Do not add empty placeholder modules that do not solve a current problem.
 - Add abstractions only when they remove real complexity or match an established project pattern.
+
+## Operational Guardrails
+
+- Clean up browser automation aggressively. After using `agent-browser`, Playwright, Chrome for Testing, or any headless browser for visual QA, close the named session or run `agent-browser close --all` when the sessions are no longer needed.
+- Before ending a browser-heavy turn, verify cleanup with `agent-browser session list` and `pgrep -afil 'agent-browser|Google Chrome for Testing|Chromium|Chrome for Testing'`. Stale headless renderers can consume hundreds of percent CPU for hours.
+- If a Codex turn is interrupted or resumed after browser QA, treat browser cleanup as mandatory before continuing feature work.
+- Stop temporary dev servers and screenshot processes once evidence has been captured. Do not leave Vite, test browsers, or one-off screenshot commands running in the background.
+- Commit and push stageable progress proactively. After each coherent visual, gameplay, architecture, or documentation milestone, run the relevant checks, stage only the intended files, commit with a clear scope, and push the branch.
+- Never bundle unrelated dirty work into a milestone commit. If the worktree contains previous user or agent changes, inspect status carefully and stage only the files that belong to the current milestone.
 
 ## Agent skills
 
