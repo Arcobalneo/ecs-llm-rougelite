@@ -43,6 +43,8 @@ describe("Wishcraft Mechanic runtime", () => {
         expect.objectContaining({
           kind: "wishcraft-hit",
           mechanicId: "projectile-lance",
+          targetRadius: 18,
+          targetTemplateId: "slow-tough",
           visualKind: "lance",
         }),
       ]),

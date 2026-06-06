@@ -54,6 +54,25 @@ describe("Combat loop tracer bullet", () => {
     expect(feedbackKinds).not.toContain("damage-number");
     expect(feedbackKinds).toContain("enemy-death");
     expect(feedbackKinds).toContain("xp-drop");
+    expect(afterAttack.feedback).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: "impact",
+          targetRadius: 11,
+          targetTemplateId: "swarm-fragile",
+          visualKind: "machine-gun",
+        }),
+      ]),
+    );
+    expect(afterAttack.feedback).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: "enemy-death",
+          radius: 11,
+          templateId: "swarm-fragile",
+        }),
+      ]),
+    );
 
     const nearShardState = {
       ...afterAttack,

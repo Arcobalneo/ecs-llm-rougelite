@@ -63,17 +63,32 @@ export interface CombatLoopState {
 const ENEMY_CONTACT_COOLDOWN_SECONDS = 0.75;
 
 export type CombatFeedback =
-  | { kind: "impact"; position: Point }
+  | {
+      kind: "impact";
+      origin?: Point;
+      position: Point;
+      targetRadius?: number;
+      targetTemplateId?: CommonEnemyTemplate["id"];
+      visualKind?: "machine-gun" | "laser-sword";
+    }
   | {
       kind: "wishcraft-hit";
       mechanicId: string;
+      origin: Point;
       position: Point;
+      targetRadius?: number;
+      targetTemplateId?: CommonEnemyTemplate["id"];
       visualKind: string;
       wishcraftId: string;
     }
   | { kind: "wishcraft-shield"; capacity: number; position: Point; wishcraftId: string }
   | { kind: "wishcraft-summon"; position: Point; summonId: string; wishcraftId: string }
-  | { kind: "enemy-death"; position: Point }
+  | {
+      kind: "enemy-death";
+      position: Point;
+      radius?: number;
+      templateId?: CommonEnemyTemplate["id"];
+    }
   | { kind: "xp-drop"; position: Point; value: number }
   | { kind: "player-hit"; position: Point; damage: number }
   | { kind: "xp-collect"; position: Point; value: number }
@@ -246,12 +261,19 @@ function applyBaseKitAttacks(
       player: state.player.position,
       enemies: state.enemies,
       range: baseKit.machineGun.range,
-    });
+    }) as CombatLoopEnemy | undefined;
     if (target) {
       target.health -= baseKit.machineGun.damage * statSupport.damageScale;
       state.nextMachineGunAtSeconds =
         nowSeconds + baseKit.machineGun.cooldownSeconds / statSupport.fireRateScale;
-      state.feedback.push({ kind: "impact", position: target.position });
+      state.feedback.push({
+        kind: "impact",
+        origin: state.player.position,
+        position: target.position,
+        targetRadius: target.radius,
+        targetTemplateId: target.templateId,
+        visualKind: "machine-gun",
+      });
     }
   }
 
@@ -270,7 +292,14 @@ function applyBaseKitAttacks(
       );
       if (distance - enemy.radius <= baseKit.laserSword.range) {
         enemy.health -= baseKit.laserSword.damage * statSupport.damageScale;
-        state.feedback.push({ kind: "impact", position: enemy.position });
+        state.feedback.push({
+          kind: "impact",
+          origin: state.player.position,
+          position: enemy.position,
+          targetRadius: enemy.radius,
+          targetTemplateId: enemy.templateId,
+          visualKind: "laser-sword",
+        });
       }
     }
     state.nextLaserSwordAtSeconds =
@@ -292,7 +321,12 @@ function removeDefeatedEnemies(state: CombatLoopState): WishcraftRuntimeEvent[] 
     const template = getEnemyTemplate(enemy.templateId);
     state.kills += 1;
     events.push({ kind: "kill", position: enemy.position });
-    state.feedback.push({ kind: "enemy-death", position: enemy.position });
+    state.feedback.push({
+      kind: "enemy-death",
+      position: enemy.position,
+      radius: enemy.radius,
+      templateId: enemy.templateId,
+    });
     state.feedback.push({ kind: "xp-drop", position: enemy.position, value: template.xpValue });
     state.xpShards.push({
       id: `xp-${state.nextXpShardId}`,
